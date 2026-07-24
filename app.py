@@ -18,9 +18,11 @@ st.set_page_config(
 
 DATA_PATH = Path(__file__).parent / "datasets" / "agro_colombia.csv"
 TECH_ORDER = ["Bajo", "Medio", "Alto", "Muy Alto"]
-GREEN = "#1f7a5a"
-GOLD = "#e5a93d"
-INK = "#16342f"
+GREEN = "#146b4d"
+GREEN_DARK = "#0b4f3b"
+GREEN_LIGHT = "#d9eee5"
+GOLD = "#b66a16"
+INK = "#172b27"
 
 
 @st.cache_data
@@ -66,17 +68,23 @@ def chart_layout(fig, height=390):
 st.markdown(
     """
     <style>
-    .stApp { background: #f5f8f5; }
-    [data-testid="stSidebar"] { background: #16342f; }
-    [data-testid="stSidebar"] * { color: #f4faf6 !important; }
-    .hero { background: linear-gradient(115deg,#16342f 0%,#1f7a5a 70%,#579b68 100%);
+    .stApp { background: #ffffff; color: #172b27; }
+    [data-testid="stSidebar"] { background: #edf5f1; border-right: 1px solid #d6e5de; }
+    [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] label, [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] small { color: #17352d !important; }
+    [data-testid="stSidebar"] [data-baseweb="select"] * { color: #17352d !important; }
+    [data-testid="stSidebar"] [data-testid="stCaptionContainer"] { color: #45635c !important; }
+    .hero { background: linear-gradient(115deg,#123c31 0%,#146b4d 70%,#2f8a63 100%);
             padding: 2.2rem 2.5rem; border-radius: 18px; color: white; margin-bottom: 1.4rem; }
     .hero h1 { font-size: 2.8rem; margin: 0; letter-spacing: -1px; }
     .hero p { font-size: 1.1rem; max-width: 760px; margin: .65rem 0 0; color: #e3f3e6; }
     .eyebrow { text-transform: uppercase; letter-spacing: 2px; font-size: .75rem; font-weight: 700; color: #b8e0bd; }
-    .chapter { color: #1f7a5a; text-transform: uppercase; letter-spacing: 1.6px; font-size: .75rem; font-weight: 800; margin-top: 1.2rem; }
-    .story { color: #45635c; font-size: 1.05rem; line-height: 1.55; }
-    div[data-testid="stMetric"] { background: white; padding: 1rem 1.1rem; border-radius: 13px; border: 1px solid #e1ece6; }
+    .chapter { color: #0b6044; text-transform: uppercase; letter-spacing: 1.6px; font-size: .75rem; font-weight: 800; margin-top: 1.2rem; }
+    .story { color: #36564d; font-size: 1.05rem; line-height: 1.55; }
+    div[data-testid="stMetric"] { background: #f4f8f6; padding: 1rem 1.1rem; border-radius: 13px; border: 1px solid #cfe1d9; }
+    div[data-testid="stMetric"] label { color: #45635c; }
+    div[data-testid="stMetricValue"] { color: #123c31; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -141,7 +149,7 @@ by_dep = filtered.groupby("Departamento", as_index=False).agg(
 by_dep["Rendimiento"] = by_dep["Produccion"] / by_dep["Area"]
 left, right = st.columns([1.15, 1])
 with left:
-    fig = px.bar(by_dep.sort_values("Produccion"), x="Produccion", y="Departamento", orientation="h", text_auto=".0f", color="Rendimiento", color_continuous_scale=["#b9d9bd", GREEN])
+    fig = px.bar(by_dep.sort_values("Produccion"), x="Produccion", y="Departamento", orientation="h", text_auto=".0f", color="Rendimiento", color_continuous_scale=["#b7d9ca", GREEN_DARK])
     fig.update_layout(coloraxis_colorbar_title="t/ha", xaxis_title="Toneladas", yaxis_title="")
     st.plotly_chart(chart_layout(fig), use_container_width=True)
 with right:
@@ -159,11 +167,11 @@ tech_summary = filtered.groupby(["Nivel_Tecnificacion", "Riego"], observed=False
 )
 left, right = st.columns(2)
 with left:
-    fig = px.bar(tech_summary, x="Nivel_Tecnificacion", y="Rendimiento", color="Riego", barmode="group", text_auto=".2f", category_orders={"Nivel_Tecnificacion": TECH_ORDER}, color_discrete_map={"Tecnificado": GREEN, "Convencional": "#c3d0cb"})
+    fig = px.bar(tech_summary, x="Nivel_Tecnificacion", y="Rendimiento", color="Riego", barmode="group", text_auto=".2f", category_orders={"Nivel_Tecnificacion": TECH_ORDER}, color_discrete_map={"Tecnificado": GREEN_DARK, "Convencional": "#9aaea6"})
     fig.update_layout(yaxis_title="Toneladas por hectárea", xaxis_title="", legend_title="Riego")
     st.plotly_chart(chart_layout(fig), use_container_width=True)
 with right:
-    fig = px.box(filtered, x="Nivel_Tecnificacion", y="Rendimiento_Ton_Ha", color="Riego", category_orders={"Nivel_Tecnificacion": TECH_ORDER}, color_discrete_map={"Tecnificado": GREEN, "Convencional": "#c3d0cb"})
+    fig = px.box(filtered, x="Nivel_Tecnificacion", y="Rendimiento_Ton_Ha", color="Riego", category_orders={"Nivel_Tecnificacion": TECH_ORDER}, color_discrete_map={"Tecnificado": GREEN_DARK, "Convencional": "#9aaea6"})
     fig.update_layout(yaxis_title="Rendimiento (t/ha)", xaxis_title="", showlegend=False)
     st.plotly_chart(chart_layout(fig), use_container_width=True)
 
