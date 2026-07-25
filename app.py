@@ -7,11 +7,15 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from dotenv import load_dotenv
 from groq import Groq
 
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:
+    load_dotenv = None
 
-load_dotenv(Path(__file__).parent / ".env")
+if load_dotenv is not None:
+    load_dotenv(Path(__file__).parent / ".env")
 
 
 st.set_page_config(
@@ -80,6 +84,11 @@ def chart_layout(fig, height=390):
 @st.cache_resource
 def get_groq_client():
     api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        try:
+            api_key = st.secrets.get("GROQ_API_KEY")
+        except Exception:
+            api_key = None
     if not api_key:
         return None
     return Groq(api_key=api_key)
