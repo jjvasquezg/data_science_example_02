@@ -1,12 +1,17 @@
 """Storytelling interactivo sobre el agro colombiano."""
 
 from pathlib import Path
+import os
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import streamlit as st
+from dotenv import load_dotenv
+from groq import Groq
+
+
+load_dotenv(Path(__file__).parent / ".env")
 
 
 st.set_page_config(
@@ -23,6 +28,13 @@ GREEN_DARK = "#0b4f3b"
 GREEN_LIGHT = "#d9eee5"
 GOLD = "#b66a16"
 INK = "#172b27"
+GROQ_MODEL = "llama-3.3-70b-versatile"
+CHAT_SYSTEM_PROMPT = """Eres un asistente conversacional experto en cultura general e historia mundial.
+Responde en español, con claridad y rigor. Explica el contexto, las causas y las consecuencias
+cuando sea útil. Si una fecha o dato es discutible, indícalo explícitamente. No inventes fuentes,
+citas ni hechos; reconoce cuando no tengas suficiente certeza. Mantén las respuestas accesibles,
+interesantes y de extensión moderada. Puedes responder preguntas de seguimiento usando el contexto
+de la conversación, pero mantén el foco en cultura general e historia mundial."""
 
 
 @st.cache_data
@@ -63,6 +75,18 @@ def chart_layout(fig, height=390):
     fig.update_xaxes(showgrid=False, linecolor="#dce8e3")
     fig.update_yaxes(gridcolor="#e8f0ed", zeroline=False)
     return fig
+
+
+@st.cache_resource
+def get_groq_client():
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        return None
+    return Groq(api_key=api_key)
+
+
+def reset_chat():
+    st.session_state.chat_messages = []
 
 
 st.markdown(
@@ -203,3 +227,48 @@ with st.expander("Ver datos y definiciones"):
     display = filtered[["ID_Finca", "Departamento", "Tipo_Cultivo", "Area_Hectareas", "Produccion_Anual_Ton", "Rendimiento_Ton_Ha", "Riego", "Nivel_Tecnificacion", "Precio_Venta_Por_Ton_COP", "Tipo_Suelo", "Fecha_Ultima_Auditoria"]].copy()
     display.columns = ["Finca", "Departamento", "Cultivo", "Área (ha)", "Producción (t)", "Rendimiento (t/ha)", "Riego", "Tecnificación", "Precio/t (COP)", "Suelo", "Última auditoría"]
     st.dataframe(display, use_container_width=True, hide_index=True)
+
+st.markdown('<div class="chapter">Asistente de conocimiento</div><h2>Conversa con HistoriaBot</h2>', unsafe_allow_html=True)
+st.markdown('<p class="story">Pregunta por civilizaciones, guerras, personajes, inventos, fechas o conexiones entre hechos históricos.</p>', unsafe_allow_html=True)
+
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
+
+chat_client = get_groq_client()
+if chat_client is None:
+    st.warning("No se encontró GROQ_API_KEY. Configura esta variable en tu archivo .env para activar el asistente.")
+else:
+    chat_col, action_col = st.columns([5, 1])
+    with action_col:
+        st.button("Limpiar chat", on_click=reset_chat, use_container_width=True)
+
+    for message in st.session_state.chat_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    prompt = st.chat_input("Ejemplo: ¿Por qué cayó el Imperio romano de Occidente?")
+    if prompt:
+        st.session_state.chat_messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        api_messages = [{"role": "system", "content": CHAT_SYSTEM_PROMPT}]
+        api_messages.extend(st.session_state.chat_messages)
+        with st.chat_message("assistant"):
+            response_placeholder = st.empty()
+            try:
+                completion = chat_client.chat.completions.create(
+                    model=GROQ_MODEL,
+                    messages=api_messages,
+                    temperature=0.35,
+                    max_tokens=900,
+                )
+                answer = completion.choices[0].message.content
+                response_placeholder.markdown(answer)
+                st.session_state.chat_messages.append({"role": "assistant", "content": answer})
+            except Exception as error:
+                response_placeholder.error(
+                    "No pude responder en este momento. Revisa la clave de Groq, la cuota disponible "
+                    "o la conexión e inténtalo de nuevo."
+                )
+                st.caption(f"Detalle técnico: {type(error).__name__}")
